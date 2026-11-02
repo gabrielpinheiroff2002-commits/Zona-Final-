@@ -1,8 +1,8 @@
 {
   "name": "Zona Final",
-  "short_name": "ZonaFinal",
+  "short_name": "Zona Final",
   "start_url": "./index.html",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "landscape",
   "background_color": "#000000",
   "theme_color": "#000000",
