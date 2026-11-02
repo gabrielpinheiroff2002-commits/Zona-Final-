@@ -2396,4 +2396,118 @@ setupMatch();zoneVisual();
 requestAnimationFrame(frame);
 })();
 </script>
+<!-- Salvar progresso com Google (Firebase) -->
+<script>
+/* Zona Final – Salvar progresso com conta Google (Firebase Auth + Firestore)
+ * Embutido no index.html (permanente). */
+(function () {
+  // 1) COLE AQUI a config do seu projeto Firebase (Console > Configurações do projeto > Seus apps > Web)
+  const FIREBASE_CONFIG = {
+    apiKey: "COLE_AQUI",
+    authDomain: "SEU-PROJETO.firebaseapp.com",
+    projectId: "SEU-PROJETO",
+    appId: "COLE_AQUI"
+  };
+  // 2) null = salva TODAS as chaves do localStorage do jogo.
+  //    Se o jogo usa um prefixo (ex.: "zf_"), coloque ["zf_"] para salvar só elas.
+  const ONLY = ["zonafinal_"];
+
+  const CONFIGURED = !/COLE_AQUI|SEU-PROJETO/.test(JSON.stringify(FIREBASE_CONFIG));
+  const V = "10.12.2", CDN = "https://www.gstatic.com/firebasejs/" + V + "/";
+  const LS = window.localStorage;
+  const rawSet = Storage.prototype.setItem;
+  const rawGet = Storage.prototype.getItem;
+  let db, auth, user, timer, busy = false, btn;
+
+  const mine = k => !/^(firebase|gs_)/i.test(k) && (!ONLY || ONLY.some(p => k.startsWith(p)));
+  const snap = () => { const o = {}; for (let i = 0; i < LS.length; i++) { const k = LS.key(i); if (mine(k)) o[k] = LS.getItem(k); } return o; };
+  const meta = () => { try { return JSON.parse(rawGet.call(LS, "gs_meta")) || {}; } catch (e) { return {}; } };
+  const setMeta = m => rawSet.call(LS, "gs_meta", JSON.stringify(m));
+  const load = src => new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+
+  function label(txt, on) { if (btn) { btn.textContent = txt; btn.style.color = on ? "#7CFC9A" : ""; } }
+
+  async function push() {
+    if (!user || busy) return;
+    busy = true; label("Salvando…", true);
+    try {
+      const t = Date.now();
+      await db.doc("users/" + user.uid).set({ data: JSON.stringify(snap()), t, name: user.displayName || "" });
+      setMeta({ uid: user.uid, t });
+      label("✓ Salvo", true);
+    } catch (e) { console.error(e); label("Erro ao salvar", false); }
+    busy = false;
+  }
+
+  function pull(cloud) {
+    const d = JSON.parse(cloud.data);
+    Object.keys(d).forEach(k => rawSet.call(LS, k, d[k]));
+    setMeta({ uid: user.uid, t: cloud.t });
+    location.reload();
+  }
+
+  async function onUser(u) {
+    user = u;
+    if (!u) { label("Salvar com Google", false); return; }
+    label("Sincronizando…", true);
+    try {
+      const doc = await db.doc("users/" + u.uid).get();
+      const m = meta();
+      if (!doc.exists) return push();
+      const cloud = doc.data();
+      if (m.uid === u.uid) { return cloud.t > (m.t || 0) ? pull(cloud) : push(); }
+      const hasLocal = Object.keys(snap()).length > 0;
+      if (!hasLocal || confirm("Encontramos um progresso salvo nesta conta Google.\n\nOK = carregar o da nuvem\nCancelar = enviar o deste aparelho")) pull(cloud);
+      else push();
+    } catch (e) { console.error(e); label("Erro ao sincronizar", false); }
+  }
+
+  async function signIn() {
+    const p = new firebase.auth.GoogleAuthProvider();
+    try { await auth.signInWithPopup(p); }
+    catch (e) {
+      if (/popup|operation-not-supported/.test(e.code || "")) auth.signInWithRedirect(p);
+      else if (e.code !== "auth/cancelled-popup-request" && e.code !== "auth/popup-closed-by-user") alert("Falha no login: " + (e.code || e.message));
+    }
+  }
+
+  function onClick() {
+    if (!CONFIGURED) return alert("Salvar com Google ainda não foi configurado.\n\nCole a config do Firebase no começo do bloco \"Salvar com Google\" no fim do index.html.");
+    if (!user) return signIn();
+    if (confirm("Conectado como " + (user.displayName || user.email) + ".\n\nOK = sair da conta\nCancelar = salvar agora")) auth.signOut();
+    else push();
+  }
+
+  function mountButton() {
+    btn = document.createElement("button");
+    btn.id = "gsBtn"; btn.type = "button"; btn.className = "ib"; btn.textContent = "Salvar com Google";
+    btn.addEventListener("click", onClick);
+    const bar = document.querySelector(".lbicons");
+    if (bar) bar.appendChild(btn);
+    else { btn.style.cssText = "position:fixed;top:10px;right:10px;z-index:99999;padding:8px 12px"; document.body.appendChild(btn); }
+  }
+
+  // Salvamento automático: qualquer alteração no localStorage agenda um envio
+  Storage.prototype.setItem = function (k, v) {
+    rawSet.call(this, k, v);
+    if (this === LS && user && mine(k)) { clearTimeout(timer); timer = setTimeout(push, 3000); }
+  };
+  document.addEventListener("visibilitychange", () => { if (document.hidden) push(); });
+  window.addEventListener("pagehide", push);
+
+  async function init() {
+    mountButton();
+    if (!CONFIGURED) { label("Salvar com Google", false); return; }
+    try {
+      await load(CDN + "firebase-app-compat.js");
+      await Promise.all([load(CDN + "firebase-auth-compat.js"), load(CDN + "firebase-firestore-compat.js")]);
+      firebase.initializeApp(FIREBASE_CONFIG);
+      auth = firebase.auth(); db = firebase.firestore();
+      auth.onAuthStateChanged(onUser);
+    } catch (e) { console.error(e); label("Sem conexão", false); }
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+})();
+
+</script>
 </body></html>
