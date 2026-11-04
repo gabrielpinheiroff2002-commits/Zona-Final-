@@ -1,0 +1,21 @@
+ZONA FINAL — PACOTE PWA
+
+Arquivos:
+- index.html: seu jogo original, preservado.
+- manifest.webmanifest: configura a instalação como aplicativo.
+- sw.js: cache básico dos arquivos locais do app.
+- icons/: ícones do aplicativo.
+
+COMO PUBLICAR NO GITHUB PAGES
+1. Extraia o ZIP.
+2. Envie todos os arquivos e a pasta icons para a mesma pasta do index.html atual no repositório.
+3. Se o GitHub perguntar, substitua o index.html antigo pelo novo.
+4. Aguarde o GitHub Pages publicar.
+5. No Android, abra o endereço HTTPS do jogo no Google Chrome.
+6. Toque no menu ⋮ e escolha "Instalar app" ou "Adicionar à tela inicial".
+
+IMPORTANTE
+- Não envie somente o index.html: envie também manifest.webmanifest, sw.js e a pasta icons.
+- O pacote mantém o código do jogo enviado; não substitui nem recria funcionalidades.
+- O cache ajuda a abrir novamente arquivos locais já carregados, mas recursos externos, login/serviços online e partes que dependem de internet podem continuar exigindo conexão.
+- Para atualizar depois, publique os novos arquivos e, se o app continuar mostrando a versão antiga, feche e abra novamente ou limpe os dados/cache do site no Chrome.
